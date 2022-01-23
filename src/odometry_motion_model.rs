@@ -99,7 +99,27 @@ impl OdometryModel{
         return (angle_l*wheel_radius,angle_r*wheel_radius)
     }
 
+
 }
+
+impl base::MotionUpdate2D for OdometryModel{
+    fn update_coords_odometry(&mut self, odom_l:f32, odom_r:f32)->base::Model2D{ 
+        let params = match self.update_get_radius_angle_distance(odom_l,odom_r){
+            Ok(v)=>{
+                    self.update_position_coords(v)
+            },
+            Err(e)=>{
+                    self.update_position_coords_straight_line(e)
+            }
+        };
+        params
+    }
+}
+
+
+
+
+
 
 
 

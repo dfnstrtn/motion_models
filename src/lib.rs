@@ -16,9 +16,15 @@ pub mod base{
                 theta
             }
         }
-
     }
 
+   
+    /// All motion models in 2 dimensions employ this trait, which takes int odometry information
+    /// (Total DISTANCE travelled by the wheels (angle*radius)) and gives the new coordinates as
+    /// output 
+    pub trait MotionUpdate2D{
+        fn update_coords_odometry(&mut self, odom_l:f32, odom_r:f32)->Model2D;
+    }
 }
 
 
