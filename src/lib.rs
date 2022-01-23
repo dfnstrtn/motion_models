@@ -24,6 +24,7 @@ pub mod base{
     /// output 
     pub trait MotionUpdate2D{
         fn update_coords_odometry(&mut self, odom_l:f32, odom_r:f32)->Model2D;
+        fn update_coords_odometry_stateless(&mut self, pos:Model2D,odom_l:f32,odom_r:f32)->Model2D;
     }
 }
 
