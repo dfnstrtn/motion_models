@@ -45,15 +45,13 @@ impl OdometryModel{
     /// Returns radius of turning , angle of turn and distance travelled 
     /// If motion is in a straight line , returns Error(distancetravelled)
     /// As stated in the struct definition odometry_l represents the DISTANCE covered by the wheel
-    /// This function does not affect any value of the state of the differential robot model except
-    /// the odometry count 
+    /// This function does not affect any value of the state of the differential robot model.
+    /// If you intend to update the odometry motion model use the function 
+    /// `update_odometry_readings()`
     pub fn update_get_radius_angle_distance(&mut self, odometry_l:f32,odometry_r:f32)->Result<ChangeParams,ChangeParams>{
         let L = self.base_length;
         let diff_l =  odometry_l - self.odometry_l;
         let diff_r = odometry_r - self.odometry_r;
-        
-        self.odometry_l=odometry_l;
-        self.odometry_r=odometry_r;
         
         let alpha = (diff_r - diff_l)/(2.0*L);
         let delta_s = (diff_l+diff_r)/2.0;
@@ -64,6 +62,16 @@ impl OdometryModel{
 
         let R = diff_l/alpha;
         Ok(ChangeParams::new(R,alpha,delta_s)) 
+    }
+    
+    /// Updates odometry readings 
+    /// No function does this internally (except the trait implementations for now)
+    /// If you want a hassle free robot working,call this function
+    /// The reasin why this is not called internally is because the functions that return the
+    /// jacobian are not supposed to update state in any way
+    pub fn update_odometry_readings(&mut self,odometry_l:f32,odometry_r:f32){
+        self.odometry_l=odometry_l;
+        self.odometry_r=odometry_r;
     }
     
 
@@ -114,7 +122,7 @@ impl OdometryModel{
 
     }
 
-    /// If the angle of curvature is zero update position_coords will not work
+    /// If the angle of curvature is zero update_position_coords will not work
     pub fn update_position_coords_straight_line_stateless(state:base::Model2D, distance:ChangeParams)->base::Model2D{
         let y_new = state.y + distance.s*state.theta.sin();
         let x_new = state.x + distance.s*state.theta.cos();
@@ -122,15 +130,55 @@ impl OdometryModel{
 
     }
 
+    // TODO ADD DOCS!!
+    // TODO test 
+    /// Gets the jacobian of a function under normal conditions.
+    /// If motion is in a straight line the radius of curvature is infinity , because of which you
+    /// may  have to use  [OdometryModel::update_get_jacobian_straight_line_stateless]
+    pub fn update_get_jacobian_stateless(state:base::Model2D, pos_change:ChangeParams)->base::JacobianModel2D{
+        let mut data = base::JacobianModel2D::zeros();
+        let y_jacobian = -pos_change.R*state.theta.sin() + pos_change.R*(state.theta + pos_change.alpha).sin();
+        
+        let x_jacobian = pos_change.R*(state.theta + pos_change.alpha).cos() - pos_change.R*state.theta.cos();
+
+        let theta_jacobian = 0.0;
+
+        data.column(2,(x_jacobian,y_jacobian,theta_jacobian));
+        data
+    }
+
+    
+    // TODO ADD DOCS!!
+    // TODO test 
+    pub fn update_get_jacobian_straight_line_stateless(state:base::Model2D, distance:ChangeParams)->base::JacobianModel2D{
+        let mut data = base::JacobianModel2D::zeros();
+        let y_jacobian = distance.s*state.theta.cos();
+        let x_jacobian = distance.s*state.theta.sin();
+        
+        // FIXME DELETE
+        if cfg!(test)
+        {
+            println!("x_jacobian : {}, y_jacobian:{}",x_jacobian,y_jacobian);
+        }
+
+        let theta_jacobian = 0.0;
+        data.column(2,(x_jacobian,y_jacobian,theta_jacobian));
+        data
+    }
+
+
+
+
+
     /// Converts an angle value to distance, the input is the angle data
     pub fn angle_to_distance(angle_l:f32,angle_r:f32,wheel_radius:f32)->(f32,f32){
         return (angle_l*wheel_radius,angle_r*wheel_radius)
     }
 
-
 }
 
 impl base::MotionUpdate2D for OdometryModel{
+    
     fn update_coords_odometry(&mut self,odom_l:f32, odom_r:f32)->base::Model2D{ 
         let params = match self.update_get_radius_angle_distance(odom_l,odom_r){
             Ok(v)=>{
@@ -140,12 +188,15 @@ impl base::MotionUpdate2D for OdometryModel{
                     self.update_position_coords_straight_line(e)
             }
         };
+        self.update_odometry_readings(odom_l,odom_r);
         params
     }
 
+
+
     /// The stateless here does not mean parameters of the struct are not used 
     /// The update_get_radius_angle_distance does update the current odometry value 
-    /// It does not however do anything to the varibale that maybe probabilitic like the x , y and
+    /// It does not however do anything to the varibale that maybe probabilistic like the x , y and
     /// theta coordinates 
     fn update_coords_odometry_stateless(&mut self,pos:base::Model2D,odom_l:f32, odom_r:f32)->base::Model2D{ 
         let params = match self.update_get_radius_angle_distance(odom_l,odom_r){
@@ -154,6 +205,23 @@ impl base::MotionUpdate2D for OdometryModel{
             },
             Err(e)=>{
                     Self::update_position_coords_straight_line_stateless(pos,e)
+            }
+        };
+        self.update_odometry_readings(odom_l,odom_r);
+        params
+    }
+
+
+    /// If working in an environment where you have to get the jacobian and the updated odometry 
+    /// get the jacobian first. The functions `update_coords_odometry_{}_stateless` change the value
+    /// of odometry of the Model internally which affects the jacobian values
+    fn get_jacobian_stateless(&mut self, pos:base::Model2D, odom_l:f32, odom_r:f32)->base::JacobianModel2D{
+        let params = match self.update_get_radius_angle_distance(odom_l,odom_r){
+            Ok(v)=>{
+                    Self::update_get_jacobian_stateless(pos,v)
+            },
+            Err(e)=>{
+                    Self::update_get_jacobian_straight_line_stateless(pos,e)
             }
         };
         params
@@ -219,5 +287,55 @@ mod tests {
 
 
     }
+
+
+
+    // TODO TEST !!
+    #[test]
+    fn stateless_odometry_jacobian_test(){
+        use super::base::MotionUpdate2D;
+        let mut initial_state = super::base::Model2D::new(0.,0.,0.5);  
+        let mut newodommodel = super::OdometryModel::new(0.1);
+        let wheel_l = 21.0;
+        let wheel_r  =20.9;
+        
+
+        let jacobian = newodommodel.get_jacobian_stateless(initial_state.clone(),wheel_l,wheel_r);
+        
+
+        let state = newodommodel.update_coords_odometry_stateless(initial_state.clone(),wheel_l,wheel_r);
+
+        
+        println!("NON LINE");
+        jacobian.data.iter().for_each(|m|{
+            for p in m{
+                print!("{} ",p);
+            }
+            println!()
+        });
+
+
+        
+        // straight line condition 
+        let mut newnewodommodel = super::OdometryModel::new(0.1);
+        let wheel_l = 20.0;
+        let wheel_r  =20.0;
+        
+        let jacobian = newnewodommodel.get_jacobian_stateless(initial_state.clone(),wheel_l,wheel_r);
+
+        let state = newnewodommodel.update_coords_odometry_stateless(initial_state.clone(),wheel_l,wheel_r);
+
+
+        println!("NON LINE");
+        jacobian.data.iter().for_each(|m|{
+            for p in m{
+                print!("{} ",p);
+            }
+            println!()
+        });
+
+    }
+
+
 
 }
