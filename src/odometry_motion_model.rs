@@ -137,9 +137,9 @@ impl OdometryModel{
     /// may  have to use  [OdometryModel::update_get_jacobian_straight_line_stateless]
     pub fn update_get_jacobian_stateless(state:base::Model2D, pos_change:ChangeParams)->base::JacobianModel2D{
         let mut data = base::JacobianModel2D::zeros();
-        let y_jacobian = /*-pos_change.R*state.theta.sin() +*/ -pos_change.R*(state.theta + pos_change.alpha).sin();
+        let y_jacobian = -pos_change.R*state.theta.sin() + pos_change.R*(state.theta + pos_change.alpha).sin();
         
-        let x_jacobian = pos_change.R*(state.theta + pos_change.alpha).cos();// - pos_change.R*state.theta.cos();
+        let x_jacobian = pos_change.R*(state.theta + pos_change.alpha).cos() - pos_change.R*state.theta.cos();
 
         let theta_jacobian = 0.0;
 
