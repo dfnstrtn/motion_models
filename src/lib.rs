@@ -1,5 +1,7 @@
 pub mod odometry_motion_model;
 
+#[cfg(test)]
+mod tests;
 pub mod base{
 
     type Real=f32;
@@ -78,7 +80,7 @@ pub mod base{
 
 
 #[cfg(test)]
-mod tests {
+mod testsinternal {
     #[test]
     fn it_works() {
         assert_eq!(2 + 2, 4);
