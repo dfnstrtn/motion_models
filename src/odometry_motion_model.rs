@@ -53,7 +53,7 @@ impl OdometryModel{
         let diff_l =  odometry_l - self.odometry_l;
         let diff_r = odometry_r - self.odometry_r;
         
-        let alpha = (diff_r - diff_l)/(2.0*L);
+        let alpha = (diff_r - diff_l)/L;
         let delta_s = (diff_l+diff_r)/2.0;
         
         if alpha==0.0{
@@ -64,6 +64,26 @@ impl OdometryModel{
         Ok(ChangeParams::new(R,alpha,delta_s)) 
     }
     
+    
+    #[deprecated]
+    pub fn update_get_radius_angle_distance_depr(&mut self, odometry_l:f32,odometry_r:f32)->Result<ChangeParams,ChangeParams>{
+        let L = self.base_length;
+        let diff_l =  odometry_l - self.odometry_l;
+        let diff_r = odometry_r - self.odometry_r;
+        
+        let alpha = (diff_r - diff_l)/(2.0*L);
+        let delta_s = (diff_l+diff_r)/2.0;
+        
+        if alpha==0.0{
+            return Err(ChangeParams::new(0.0,0.0,delta_s))
+        }
+
+        let R = diff_l/alpha;
+        Ok(ChangeParams::new(R,alpha,delta_s)) 
+    }
+
+
+
     /// Updates odometry readings 
     /// No function does this internally (except the trait implementations for now)
     /// If you want a hassle free robot working,call this function
@@ -137,7 +157,7 @@ impl OdometryModel{
     /// may  have to use  [OdometryModel::update_get_jacobian_straight_line_stateless]
     pub fn update_get_jacobian_stateless(state:base::Model2D, pos_change:ChangeParams)->base::JacobianModel2D{
         let mut data = base::JacobianModel2D::zeros();
-        let y_jacobian = /*-pos_change.R*state.theta.sin() +*/ -pos_change.R*(state.theta + pos_change.alpha).sin();
+        let y_jacobian = -pos_change.R*state.theta.sin() + pos_change.R*(state.theta + pos_change.alpha).sin();
         
         let x_jacobian = pos_change.R*(state.theta + pos_change.alpha).cos() - pos_change.R*state.theta.cos();
 

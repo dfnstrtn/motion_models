@@ -1,4 +1,6 @@
 pub mod odometry_motion_model;
+pub mod velocity_motion_model;
+
 
 #[cfg(test)]
 mod tests;
@@ -74,6 +76,23 @@ pub mod base{
         fn update_coords_odometry_stateless(&mut self, pos:Model2D,odom_l:f32,odom_r:f32)->Model2D;
         fn get_jacobian_stateless(&mut self, pos:Model2D, odom_l:f32, odom_r:f32)->JacobianModel2D;
     }
+
+
+
+pub struct ChangeParams{
+    pub R:f32,
+    pub alpha:f32,
+    pub s:f32
+}
+impl ChangeParams{
+    pub fn new(R:f32,alpha:f32,s:f32)->ChangeParams{
+        ChangeParams{
+            R,
+            alpha,
+            s
+        }
+    }
+}
 
 
 }

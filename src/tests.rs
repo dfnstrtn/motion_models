@@ -20,7 +20,7 @@ fn odometry_model_test() {
 
     
     let mut newodommodel  = OdometryModel::new(0.1054);
-    let wheel_radius = 0.042;
+    let wheel_radius = 0.021;
     let mut initial_state = crate::base::Model2D::new(0.,0.,1.57);  
     let mut coords:Vec<(f32,f32,f32)> =vec![(0.,0.,1.57)]; 
     
