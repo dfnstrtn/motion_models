@@ -1,9 +1,9 @@
 use super::base;
 
 pub struct ChangeParams{
-    R:f32,
-    alpha:f32,
-    s:f32
+    pub R:f32,
+    pub alpha:f32,
+    pub s:f32
 }
 impl ChangeParams{
     pub fn new(R:f32,alpha:f32,s:f32)->ChangeParams{

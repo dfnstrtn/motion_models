@@ -63,23 +63,31 @@ impl VelocityMotionModel{
     }
 
     
-    /// Gets the jacobian of a function under normal conditions.
-    /// If motion is in a straight line the radius of curvature is infinity , because of which you
-    /// may  have to use  [OdometryModel::update_get_jacobian_straight_line_stateless]
-    pub fn update_get_jacobian_stateless(state:crate::base::Model2D, pos_change:ChangeParams)->base::JacobianModel2D{
-        let mut data = base::JacobianModel2D::zeros();
-        let y_jacobian = -pos_change.R*state.theta.sin() + pos_change.R*(state.theta + pos_change.alpha).sin();
-        
-        let x_jacobian = pos_change.R*(state.theta + pos_change.alpha).cos() - pos_change.R*state.theta.cos();
-
-        let theta_jacobian = 0.0;
-
-        data.column(2,(x_jacobian,y_jacobian,theta_jacobian));
-        data
+    pub fn update_get_jacobian_stateless(&mut self, state:crate::base::Model2D, odom_l:f32,odom_r:f32)->base::JacobianModel2D{
+        match self.update_get_radius_angle_distance(odom_l,odom_r){
+            Ok(omega_change)=>{
+                let mut data = base::JacobianModel2D::zeros();
+                let y_jacobian = -omega_change.R*state.theta.sin() + omega_change.R*(state.theta + omega_change.alpha).sin();
+                let x_jacobian = omega_change.R*(state.theta + omega_change.alpha).cos() - omega_change.R*state.theta.cos();
+                let theta_jacobian = 0.0;
+                data.column(2,(x_jacobian,y_jacobian,theta_jacobian));
+                data
+            }
+            Err(velocity)=>{ 
+                let mut data = base::JacobianModel2D::zeros();
+                let y_jacobian = velocity.s*state.theta.cos();
+                let x_jacobian = velocity.s*state.theta.sin();
+                // FIXME DELETE
+                if cfg!(test)
+                {
+                    println!("x_jacobian : {}, y_jacobian:{}",x_jacobian,y_jacobian);
+                }
+                let theta_jacobian = 0.0;
+                data.column(2,(x_jacobian,y_jacobian,theta_jacobian));
+                data
+            }
+        }
     }
-
-
-
 
 
 }
