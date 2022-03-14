@@ -173,7 +173,7 @@ impl OdometryModel{
     pub fn update_get_jacobian_straight_line_stateless(state:base::Model2D, distance:ChangeParams)->base::JacobianModel2D{
         let mut data = base::JacobianModel2D::zeros();
         let y_jacobian = distance.s*state.theta.cos();
-        let x_jacobian = distance.s*state.theta.sin();
+        let x_jacobian = -distance.s*state.theta.sin();
         
         // FIXME DELETE
         if cfg!(test)
@@ -355,6 +355,34 @@ mod tests {
         });
 
     }
+
+
+
+
+
+
+    #[test]
+    fn files_odometry_model_test(){
+        use super::base::MotionUpdate2D;
+        let mut initial_state = super::base::Model2D::new(0.,0.,0.);
+        let mut newodommodel = super::OdometryModel::new(0.1);
+        let wheel_l = 21.0;
+        let wheel_r  =20.9;
+        initial_state = newodommodel.update_coords_odometry_stateless(initial_state,wheel_l,wheel_r);
+    
+        println!("STATELESS ODOM TEST");
+        println!("x : {:?} , y: {:?}, theta: {:?}",initial_state.x,initial_state.y,initial_state.theta);
+
+
+    }
+
+
+
+
+
+
+
+
 
 
 
